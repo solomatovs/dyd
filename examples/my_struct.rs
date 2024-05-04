@@ -6,7 +6,7 @@ fn main() {
     trace_macros!(true);
 
     jude! (
-        #[derive(Copy, Clone, Debug)]
+        // #[derive(Clone, Debug)]
         pub struct MyStruct {
             pub fn fn_one(self, one: u8),
             fn fn_two(&self, one: u8),
@@ -23,7 +23,8 @@ fn main() {
                 let dd = s / 4;
                 dd
             },
-            // tree: String = String::from(""),
+            tree: String = String::from("my variable"),
+            // four: &'a u8 = &9,
         }
     );
 }
