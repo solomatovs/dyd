@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["solomatovs <solomatovs@gmail.com>"]
 edition = "2021"
 license = "mit"
-description = ""
 homepage = "https://github.com/solomatovs/jude"
 repository = "https://github.com/solomatovs/jude"
 readme = "README.md"
