@@ -61,17 +61,17 @@ macro_rules! dyd(
     );
     
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {}
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {}
     ) => (
         dyd!(output $decl $impl
             [$($member)*]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
         );
     );
 
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(&mut self $(,)? $($item:ident:$ty:ty),*) $(-> $ret:ty)?, $($t:tt)*
@@ -79,20 +79,19 @@ macro_rules! dyd(
     ) => (
         dyd!(parse $decl $impl 
             [$($member)*]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name], 
                 [self], [&mut Self,], [&mut self,], [self,], 
                 [$($item:$ty),*], [$(-> $ret)?], $($t)*
             }
-
         );
     );
 
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(&self $(,$item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
@@ -100,8 +99,8 @@ macro_rules! dyd(
     ) => (
         dyd!( parse $decl $impl 
             [$($member)*]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -113,7 +112,7 @@ macro_rules! dyd(
     );
 
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(self $(,$item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
@@ -121,8 +120,8 @@ macro_rules! dyd(
     ) => (
         dyd!( parse $decl $impl 
             [$($member)*]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -134,7 +133,7 @@ macro_rules! dyd(
     );
     
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident($($item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
@@ -142,8 +141,8 @@ macro_rules! dyd(
     ) => (
         dyd!( parse $decl $impl 
             [$($member)*]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -155,35 +154,38 @@ macro_rules! dyd(
     );
     
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             [$fnattr:tt], [fn $name:ident], [$self:tt], [$($member_self:tt)*], [$($fn_decl_self:tt)*], [$($fn_call_self:tt)*], [$($item:ident : $ty:ty),*], [$(-> $ret:ty)?], $($t:tt)*
         }
     ) => (
         dyd!(parse $decl $impl
             [$($member)* $name: fn($($member_self)* $($ty),*) $(-> $ret)?,]
+            [ $($fn_member)*, ]
             [$($fn)* $fnattr fn $name($($fn_decl_self)* $($item:$ty),*) $(-> $ret)? {
                 ($self.$name)($($fn_call_self)* $($item),*)
             }]
-            [ $($fn_member)*, ]
             { $($t)* }
         );
     );
     
     (
-        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*] {
+        parse $decl:tt $impl:tt [$($member:tt)*] [$($fn_member:tt)*] [$($fn:tt)*] {
             $name:ident: $typ:ty, $($t:tt)*
         }
     ) => (
         dyd!(parse $decl $impl 
             [$($member)* $name: $typ,]
-            [$($fn)*]
             [$($fn_member)*]
+            [$($fn)*]
             { $($t)* }
         );
     );
 
     (
-        output [$($decls:tt)*] [$($impl:tt)*] [$($member:tt)*] [$($fn:tt)*] [$($fn_member:tt)*]
+        output [$($decls:tt)*] [$($impl:tt)*]
+            [$($member:tt)*]
+            [$($fn_member:tt)*]
+            [$($fn:tt)*]
     )
     => (
         $crate::as_item!(

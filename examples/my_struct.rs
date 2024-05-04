@@ -5,7 +5,7 @@
 pub use dyd::dyd;
 
 fn main() {
-    trace_macros!(true);
+    // trace_macros!(true);
 
     dyd! (
         #[derive(Copy, Clone, Debug)]
