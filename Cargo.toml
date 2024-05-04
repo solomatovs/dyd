@@ -8,6 +8,7 @@ description = ""
 homepage = "https://github.com/solomatovs/jude"
 repository = "https://github.com/solomatovs/jude"
 readme = "README.md"
+description = "trash from ussr"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libloading = { version = "0.8.3" }
