@@ -1,45 +1,5 @@
 #![feature(trace_macros)]
 
-use std::fmt::Debug;
-use std::sync::TryLockError;
-
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum JudeError {
-    #[error("failed to take the lock {0}, try again later")]
-    WouldBlock(String),
-
-    #[error("poisoned lock {0}. please reload lib {0}")]
-    PoisonedLock(String, String),
-
-    // #[error("failed to load {0}: {1}")]
-    // FailedToLoadLib(String, libloading::Error),
-
-    // #[error("failed to load symbol {0} in lib {1}: {2}")]
-    // FailedToLoadSymbol(String, String, libloading::Error),
-    #[error("failed to load {0}")]
-    FailedToLoadLib(libloading::Error),
-
-    #[error("failed to load symbol {0}")]
-    FailedToLoadSymbol(libloading::Error),
-}
-
-impl From<libloading::Error> for JudeError {
-    fn from(item: libloading::Error) -> Self {
-        JudeError::FailedToLoadLib(item)
-    }
-}
-
-impl<T> From<TryLockError<T>> for JudeError {
-    fn from(item: TryLockError<T>) -> Self {
-        match item {
-            TryLockError::WouldBlock => JudeError::WouldBlock("lib".into()),
-            TryLockError::Poisoned(x) => JudeError::PoisonedLock(x.to_string(), "lib".into()),
-        }
-    }
-}
-
 #[macro_export]
 macro_rules! as_item( ($i:item) => ($i) );
 
@@ -139,13 +99,13 @@ macro_rules! jude(
             [ $($fn_not_impl)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
-                [fn $name], 
-                [self], [&mut Self,], [&mut self,], [self,], 
+                [fn $name],
+                [self], [&mut Self,], [&mut self,], [self,],
                 [$($item:$ty),*], [$(-> $ret)?], $($t)*
             }
         );
     );
-    
+
     // это парсинг фукнции с &self первым аргументом
     (
         parse $struct_name:tt $struct_vis:tt $struct_attr:tt $struct_lifetime:tt
@@ -207,7 +167,7 @@ macro_rules! jude(
             }
         );
     );
-    
+
     // это парсинг фукнции без первого аргумента с типами: self, &self, &mut self
     (
         parse $struct_name:tt $struct_vis:tt $struct_attr:tt $struct_lifetime:tt
@@ -238,7 +198,7 @@ macro_rules! jude(
             }
         );
     );
-    
+
     // после парсинга функций без реализации с первым аргументом:: self, &self, &mut self
     // происходит формирование блоков member_impl, field_impl, fn
     // - member_impl - список полей структуры, который будет отображен в блоке struct
@@ -279,7 +239,7 @@ macro_rules! jude(
             { $($t)* }
         );
     );
-    
+
     // это парсинг полей структуры
     // значения которых вычисляется через выражение с блоком $body:block
     (
@@ -388,7 +348,7 @@ macro_rules! jude(
 
 
     (
-        output 
+        output
             [ $struct_name:tt ]
             [ $struct_vis:tt ]
             [ $(#[$struct_attr:meta])* ]
@@ -421,7 +381,7 @@ macro_rules! jude(
         $crate::as_item!(
             impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
                 $($fn_not_impl)*
-                
+
                 fn load_from_lib(file_path: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
                     let lock = std::sync::RwLock::new(());
                     let lib = unsafe {
@@ -435,7 +395,7 @@ macro_rules! jude(
                                 let symbol = unsafe {
                                     lib.get(stringify!($field_not_impl).as_bytes())
                                 }?;
-                                
+
                                 *symbol
                             },
                         )*
