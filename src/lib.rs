@@ -1,13 +1,13 @@
 #![feature(trace_macros)]
 
-// use libloading::{Error, Library, Symbol};
-// use std::path::{Path, PathBuf};
-// use std::ffi::{OsStr, OsString};
-// use std::sync::Arc;
+use libloading::{Error, Library, Symbol};
+use std::path::{Path, PathBuf};
+use std::ffi::{OsStr, OsString};
+use std::sync::Arc;
 
 
-// use std::sync::RwLock;
-// use std::fmt::Debug;
+use std::sync::RwLock;
+use std::fmt::Debug;
 use std::sync::TryLockError;
 
 use thiserror::Error;
@@ -64,19 +64,27 @@ macro_rules! jude(
             ]
             [impl $(<$($lifetime),+>)* $name $(<$($lifetime),+>)*]
             [$(<$($lifetime),+>)*]
-            [] [] [] $body
+            [] [] [] [] [] $body
         );
     );
     
     // на этом этапе все фуркции и поля были разбиты на блоки поэтому остался только {}
     // передаю все блоки output
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {}
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {}
     ) => (
         jude!(output $struct_decl $struct_impl $struct_lifetime
-            [$($member)*]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
         );
     );
 
@@ -84,37 +92,53 @@ macro_rules! jude(
     // такие функции обладают телом функции: $body:block
     // их передаю в исходном виде и никак не изменяем
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident($($tt:tt)*) $(-> $ret:ty)? $body:block, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [ $($member)* ]
-            [ $($member_construct)* ]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
             [ $($fn)* $(#[$attr])* $vis $(<$($lifetime),+>)* fn $name($($tt)*) $(-> $ret)? $body ]
             { $($t)* }
         );
     );
 
     // парсинг функций без реализации
-    // такие функции нужно разбить на части для корректного добавления в member, member_construct, fn блоки
+    // такие функции нужно разбить на части для корректного добавления в member_impl, field_impl, fn блоки
     // такиим функциям будет дописано тело функции, которое содержит вызов
     // из загруженной динамической библиотеки
 
     // это парсинг фукнции с &mut self первым аргументом
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(&mut self $(,)? $($item:ident:$ty:ty),*) $(-> $ret:ty)?, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)*]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name], 
@@ -126,16 +150,24 @@ macro_rules! jude(
     
     // это парсинг фукнции с &self первым аргументом
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(&self $(,$item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
         }
     ) => (
         jude!( parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)*]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -147,16 +179,24 @@ macro_rules! jude(
 
     // это парсинг фукнции с self первым аргументом
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident(self $(,$item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
         }
     ) => (
         jude!( parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)*]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -168,16 +208,24 @@ macro_rules! jude(
     
     // это парсинг фукнции без первого аргумента с типами: self, &self, &mut self
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
             fn $name:ident($($item:ident:$ty:ty)*) $(-> $ret:ty)?, $($t:tt)*
         }
     ) => (
         jude!( parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)*]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -188,22 +236,38 @@ macro_rules! jude(
     );
     
     // после парсинга функций без реализации с первым аргументом:: self, &self, &mut self
-    // происходит формирование блоков member, member_construct, fn
-    // - member - список полей структуры, который будет отображен в блоке struct
-    // - member_construct - это выражения через которые заполняются поля указателей через подгрузку динамической библиокети в конструкторе
+    // происходит формирование блоков member_impl, field_impl, fn
+    // - member_impl - список полей структуры, который будет отображен в блоке struct
+    // - field_impl - это выражения через которые заполняются поля указателей через подгрузку динамической библиокети в конструкторе
     // - fn - список функций в struct_impl блоке где происходит вызов функции из динамической библиокеки
     // далее из этих блоков будет составлена struct и struct_impl блоки с полями и функциями
-    // функции не имеющие реализацию будут иметь поле указатель (member) с названием этой функции
+    // функции не имеющие реализацию будут иметь поле указатель (member_impl) с названием этой функции
     // данный указатель будет заполняться в конструкторе через загрузку динамической библиотеки
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
-            [$fnattr:tt], [fn $name:ident], [$self:tt], [$($member_self:tt)*], [$($fn_struct_decl_self:tt)*], [$($fn_call_self:tt)*], [$($item:ident : $ty:ty),*], [$(-> $ret:ty)?], $($t:tt)*
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
+            [$fnattr:tt],
+            [fn $name:ident],
+            [$self:tt],
+            [$($member_impl_self:tt)*],
+            [$($fn_struct_decl_self:tt)*],
+            [$($fn_call_self:tt)*],
+            [$($item:ident : $ty:ty),*],
+            [$(-> $ret:ty)?],
+            $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)* $name: fn($($member_self)* $($ty),*) $(-> $ret)?,]
-            [ $($member_construct)* ]
-            [$($fn)* $fnattr fn $name($($fn_struct_decl_self)* $($item:$ty),*) $(-> $ret)? {
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* $name: fn($($member_impl_self)* $($ty),*) $(-> $ret)?, ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* $name, ]
+            [ $($fn)* $fnattr fn $name($($fn_struct_decl_self)* $($item:$ty),*) $(-> $ret)? {
                 ($self.$name)($($fn_call_self)* $($item),*)
             }]
             { $($t)* }
@@ -213,15 +277,23 @@ macro_rules! jude(
     // это парсинг полей структуры
     // значения которых вычисляется через выражение с блоком $body:block
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis
             $name:ident: $(<$($lifetime:lifetime),+>)* $typ:ty = $body:block, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [ $($member)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
-            [ $($member_construct)* $name: $body, ]
+            [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* $name: $body, ]
+            [ $($field_not_impl)* ]
             [ $($fn)* ]
             { $($t)* }
         );
@@ -230,15 +302,23 @@ macro_rules! jude(
     // это парсинг полей структуры
     // значения которых вычисляется через явное назначение литерала
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis
             $name:ident: $(<$($lifetime:lifetime),+>)* $typ:ty = $body:literal, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [ $($member)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
-            [ $($member_construct)* $name: $body, ]
+            [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* $name: $body, ]
+            [ $($field_not_impl)* ]
             [ $($fn)* ]
             { $($t)* }
         );
@@ -247,45 +327,67 @@ macro_rules! jude(
     // это парсинг полей структуры
     // значения которых вычисляется через явное назначение expr
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis
             $name:ident: $(<$($lifetime:lifetime),+>)* $typ:ty = $($body:expr)+, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [ $($member)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
-            [ $($member_construct)* $name: $($body)+, ]
+            [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* $name: $($body)+, ]
+            [ $($field_not_impl)* ]
             [ $($fn)* ]
             { $($t)* }
         );
     );
 
     (
-        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt [$($member:tt)*] [$($member_construct:tt)*] [$($fn:tt)*] {
+        parse $struct_decl:tt $struct_impl:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn:tt)* ]
+        {
             $(#[$attr:meta])*
             $vis:vis
             $name:ident: $(<$($lifetime:lifetime),+>)* $typ:ty, $($t:tt)*
         }
     ) => (
         jude!(parse $struct_decl $struct_impl $struct_lifetime
-            [$($member)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
-            [$($member_construct)*]
-            [$($fn)*]
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
+            [ $($field_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn)* ]
             { $($t)* }
         );
     );
 
     (
         output [$($struct_decls:tt)*] [$($struct_impl:tt)*] [$(<$($struct_lifetime:lifetime),+>)*]
-            [$($member:tt)*]
-            [$($member_construct:tt)*]
-            [$($fn:tt)*]
+            [ $($member_impl:tt)* ]
+            [ $($member_not_impl:tt)* ]
+            [ $($field_impl:tt)*]
+            [ $($field_not_impl:tt, )*]
+            [ $($fn:tt)* ]
     )
     => (
         $crate::as_item!(
             $($struct_decls)* {
-                $($member)*
+                file_path: std::ffi::OsString,
+                lib: std::sync::Arc<libloading::Library>,
+                lock: std::sync::Arc<std::sync::RwLock<()>>,
+                $($member_impl)*
+                $($member_not_impl)*
             }
         );
 
@@ -297,12 +399,30 @@ macro_rules! jude(
 
         $crate::as_item!(
             $($struct_impl)* {
-                fn new() -> Self {
-                    Self {
-                        $($member_construct)*
-                    }
+                fn new(file_path: std::ffi::OsString) -> Result<Self, $crate::JudeError> {
+                    let lock = std::sync::RwLock::new(());
+                    let lib = unsafe {
+                        libloading::Library::new(&file_path)
+                    }?;
+
+                    let res = Self {
+                        $($field_impl)*
+                        $(
+                            $field_not_impl: {
+                                let symbol = unsafe {
+                                    lib.get(stringify!($field_not_impl).as_bytes())
+                                }?;
+                                
+                                *symbol
+                            },
+                        )*
+                        file_path,
+                        lib: std::sync::Arc::new(lib),
+                        lock: std::sync::Arc::new(lock),
+                    };
+
+                    Ok(res)
                 }
-                
             }
         );
     );
