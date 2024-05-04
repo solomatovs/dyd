@@ -1,13 +1,11 @@
-#![feature(macro_metavar_expr)]
 #![feature(trace_macros)]
 
-
-pub use dyd::dyd;
+pub use jude::jude;
 
 fn main() {
-    // trace_macros!(true);
+    trace_macros!(true);
 
-    dyd! (
+    jude! (
         #[derive(Copy, Clone, Debug)]
         pub struct MyStruct {
             pub fn fn_one(self, one: u8),
@@ -19,7 +17,13 @@ fn main() {
                 let member = 8;
                 member;
             },
-            one: u8,
+            one: u8 = 8,
+            two: u8 = {
+                let s = 88;
+                let dd = s / 4;
+                dd
+            },
+            // tree: String = String::from(""),
         }
     );
 }
