@@ -15,6 +15,10 @@ fn main() {
             fn fn_tree(&mut self, one: u8),
             fn fn_four(one: u8),
             fn fn_five(one: &mut u8) -> Self,
+            fn fn_six(&self, one: &mut Self) {
+                let member = 8;
+                member;
+            },
             one: u8,
         }
     );
