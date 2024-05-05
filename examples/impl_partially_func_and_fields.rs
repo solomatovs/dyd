@@ -1,31 +1,39 @@
-#![feature(trace_macros)]
-
 use std::ffi::OsString;
 
-pub use jude::jude;
-
+use jude::jude;
 
 jude! (
-    #[derive(Clone, Debug)]
+    #[repr(C)]
+    #[derive(Debug)]
     pub struct ImplPartiallyFuncAndFields {
-        pub fn fn_from_lib_1(self, one: u8),
-        pub fn fn_from_lib_2(&self, one: u8),
-        pub fn fn_from_lib_3(&mut self, one: u8),
-        pub fn fn_from_lib_4(one: u8),
-        pub fn fn_self_impl(&mut self, one: u8) {
-            self.fiels_1 = one;
-        },
-        fiels_1: u8 = 8,
-        field_2: u8 = {
-            let s = 88;
-            let dd = s / 4;
-            dd
-        },
+        pub one: u8 = 1,
+        pub two: i8 = -2,
+        pub tree: f32 = 3.0,
+        pub four: bool = true,
+        pub five: String = String::from("two"),
+
+        pub fn say(&self, word: &str),
     }
 );
 
-fn main() {
-    let lib = ImplPartiallyFuncAndFields::load_from_lib(OsString::from("libmy.dymod"));
+impl std::ops::Drop for ImplPartiallyFuncAndFields {
+    fn drop(&mut self) {
+        println!("self drop {:#?}", self);
+    }
+}
 
-    println!("{:?}", lib);
+fn main() -> Result<(), libloading::Error> {
+    let lib = ImplPartiallyFuncAndFields::load_from_lib(
+        OsString::from("target/debug/examples/libshared_1.dylib")
+    )?;
+
+    lib.say("hello");
+
+    let lib = ImplPartiallyFuncAndFields::load_from_lib(
+        OsString::from("target/debug/examples/libshared_2.dylib")
+    )?;
+
+    lib.say("world");
+
+    Ok(())
 }

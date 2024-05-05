@@ -6,7 +6,6 @@ macro_rules! as_item( ($i:item) => ($i) );
 #[macro_export]
 macro_rules! jude(
     (
-        $(@$($mods:tt)*)*
         $(#[$attr:meta])*
         $vis:vis
         struct $name:ident $(<$($lifetime:lifetime),+>)* $body:tt
@@ -403,11 +402,11 @@ macro_rules! jude(
         $crate::as_item!(
             $(#[$struct_attr])*
             $struct_vis struct $struct_name $(<$($struct_lifetime),+>)* {
-                _from_file: std::ffi::OsString,
-                _from_lib: std::sync::Arc<libloading::Library>,
-                _self_lock: std::sync::Arc<std::sync::RwLock<()>>,
                 $($member_impl)*
                 $($member_not_impl)*
+                __from_file: std::ffi::OsString,
+                __from_lib: std::sync::Arc<libloading::Library>,
+                __modified: std::time::SystemTime,
             }
         );
 
@@ -421,11 +420,13 @@ macro_rules! jude(
             impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
                 $($fn_not_impl)*
 
-                fn load_from_lib(_from_file: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
-                    let lock = std::sync::RwLock::new(());
+                fn load_from_lib(file_path: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
                     let lib = unsafe {
-                        libloading::Library::new(&_from_file)
+                        libloading::Library::new(&file_path)
                     }?;
+
+                    let modified = std::fs::metadata(&file_path).unwrap();
+                    let modified = modified.modified().unwrap();
 
                     let res = Self {
                         $($field_impl)*
@@ -438,12 +439,49 @@ macro_rules! jude(
                                 *symbol
                             },
                         )*
-                        _from_file,
-                        _from_lib: std::sync::Arc::new(lib),
-                        _self_lock: std::sync::Arc::new(lock),
+                        __from_file: file_path,
+                        __from_lib: std::sync::Arc::new(lib),
+                        __modified: modified,
                     };
 
                     Ok(res)
+                }
+
+                fn reload_lib(&mut self) -> Result<(), libloading::Error> {
+                    
+                    let from_file = self.__from_file.clone();
+                    let lib = unsafe {
+                        libloading::Library::new(&from_file)
+                    }?;
+
+                    let modified = std::fs::metadata(&from_file).unwrap();
+                    let modified = modified.modified().unwrap();
+
+                    $(
+                        self.$field_not_impl = {
+                            let symbol = unsafe {
+                                lib.get(stringify!($field_not_impl).as_bytes())
+                            }?;
+
+                            *symbol
+                        };
+                    )*
+
+                    self.__from_lib = std::sync::Arc::new(lib);
+                    self.__from_file = from_file;
+                    self.__modified = modified;
+    
+                    Ok(())
+                }
+
+                fn changed(&self) -> Result<bool, std::io::Error> {
+                    let modified = std::fs::metadata(&self.__from_file)?;
+                    let modified = modified.modified()?;
+
+                    match modified.duration_since(self.__modified) {
+                        Ok(x) => Ok(x.is_zero()),
+                        Err(e) => Ok(false),
+                    }
                 }
             }
         );

@@ -1,13 +1,37 @@
 [package]
 name = "jude"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["solomatovs <solomatovs@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/solomatovs/jude"
 repository = "https://github.com/solomatovs/jude"
+documentation = "https://github.com/solomatovs/jude"
 readme = "README.md"
-description = "trash from ussr"
+description = "dynamic reloading of shared libraries"
+keywords = ["jude", "dynamic", "addins", "plugins", "reload", "sharedlibrary"]
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-libloading = { version = "0.8.3" }
+libloading = "0.8.*"
+
+
+[[example]]
+name = "shared_1"
+path = "examples/shared_1.rs"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "shared_2"
+path = "examples/shared_2.rs"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "impl_all_func_and_fields"
+path = "examples/impl_all_func_and_fields.rs"
+crate-type = ["bin"]
+
+[[example]]
+name = "impl_partially_func_and_fields"
+path = "examples/impl_partially_func_and_fields.rs"
+crate-type = ["bin"]

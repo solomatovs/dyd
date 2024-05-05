@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "example: impl_all_func_and_fields",
+            "name": "impl_all_func_and_fields",
             "cargo": {
                 "args": [
                     "build",
@@ -25,7 +25,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "example: impl_partially_func_and_fields",
+            "name": "impl_partially_func_and_fields",
             "cargo": {
                 "args": [
                     "build",
