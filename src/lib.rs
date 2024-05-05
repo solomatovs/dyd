@@ -346,6 +346,45 @@ macro_rules! jude(
         );
     );
 
+    // если нет полей и методов без реализации
+    // то создаем структуру без load_from_lib
+    (
+        output
+            [ $struct_name:tt ]
+            [ $struct_vis:tt ]
+            [ $(#[$struct_attr:meta])* ]
+            [ $(<$($struct_lifetime:lifetime),+>)* ]
+            [ $($member_impl:tt)* ]
+            [ ]
+            [ $($field_impl:tt)* ]
+            [ ]
+            [ $($fn_impl:tt)* ]
+            [ ]
+    )
+    => (
+        $crate::as_item!(
+            $(#[$struct_attr])*
+            $struct_vis struct $struct_name $(<$($struct_lifetime),+>)* {
+                $($member_impl)*
+            }
+        );
+
+        $crate::as_item!(
+            impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
+                $($fn_impl)*
+            }
+        );
+
+        $crate::as_item!(
+            impl $(<$($struct_lifetime),+>)* std::default::Default for $struct_name $(<$($struct_lifetime),+>)* {
+                fn default() -> Self {
+                    Self {
+                        $($field_impl)*
+                    }
+                }
+            }
+        );
+    );
 
     (
         output
@@ -355,8 +394,8 @@ macro_rules! jude(
             [ $(<$($struct_lifetime:lifetime),+>)* ]
             [ $($member_impl:tt)* ]
             [ $($member_not_impl:tt)* ]
-            [ $($field_impl:tt)*]
-            [ $($field_not_impl:tt, )*]
+            [ $($field_impl:tt)* ]
+            [ $($field_not_impl:tt, )* ]
             [ $($fn_impl:tt)* ]
             [ $($fn_not_impl:tt)* ]
     )

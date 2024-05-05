@@ -7,15 +7,33 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "example: my_struct",
+            "name": "example: impl_all_func_and_fields",
             "cargo": {
                 "args": [
                     "build",
-                    "--example=my_struct",
+                    "--example=impl_all_func_and_fields",
                     "--package=jude"
                 ],
                 "filter": {
-                    "name": "my_struct",
+                    "name": "impl_all_func_and_fields",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "example: impl_partially_func_and_fields",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=impl_partially_func_and_fields",
+                    "--package=jude"
+                ],
+                "filter": {
+                    "name": "impl_partially_func_and_fields",
                     "kind": "example"
                 }
             },

@@ -4,9 +4,10 @@ use std::ffi::OsString;
 
 pub use jude::jude;
 
+
 jude! (
     #[derive(Clone, Debug)]
-    pub struct MyStruct {
+    pub struct ImplPartiallyFuncAndFields {
         pub fn fn_from_lib_1(self, one: u8),
         pub fn fn_from_lib_2(&self, one: u8),
         pub fn fn_from_lib_3(&mut self, one: u8),
@@ -24,7 +25,7 @@ jude! (
 );
 
 fn main() {
-    let lib = MyStruct::load_from_lib(OsString::from("libmy.dymod"));
+    let lib = ImplPartiallyFuncAndFields::load_from_lib(OsString::from("libmy.dymod"));
 
     println!("{:?}", lib);
 }
