@@ -403,9 +403,9 @@ macro_rules! jude(
         $crate::as_item!(
             $(#[$struct_attr])*
             $struct_vis struct $struct_name $(<$($struct_lifetime),+>)* {
-                file_path: std::ffi::OsString,
-                lib: std::sync::Arc<libloading::Library>,
-                lock: std::sync::Arc<std::sync::RwLock<()>>,
+                _from_file: std::ffi::OsString,
+                _from_lib: std::sync::Arc<libloading::Library>,
+                _self_lock: std::sync::Arc<std::sync::RwLock<()>>,
                 $($member_impl)*
                 $($member_not_impl)*
             }
@@ -421,10 +421,10 @@ macro_rules! jude(
             impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
                 $($fn_not_impl)*
 
-                fn load_from_lib(file_path: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
+                fn load_from_lib(_from_file: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
                     let lock = std::sync::RwLock::new(());
                     let lib = unsafe {
-                        libloading::Library::new(&file_path)
+                        libloading::Library::new(&_from_file)
                     }?;
 
                     let res = Self {
@@ -438,9 +438,9 @@ macro_rules! jude(
                                 *symbol
                             },
                         )*
-                        file_path,
-                        lib: std::sync::Arc::new(lib),
-                        lock: std::sync::Arc::new(lock),
+                        _from_file,
+                        _from_lib: std::sync::Arc::new(lib),
+                        _self_lock: std::sync::Arc::new(lock),
                     };
 
                     Ok(res)
