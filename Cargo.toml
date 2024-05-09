@@ -9,7 +9,7 @@ repository = "https://github.com/solomatovs/jude"
 documentation = "https://github.com/solomatovs/jude"
 readme = "README.md"
 description = "dynamic reloading of shared libraries"
-keywords = ["jude", "dynamic", "addins", "plugins", "reload", "sharedlibrary"]
+keywords = ["jude", "dynamic", "plugins", "reload", "sharedlibrary"]
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
