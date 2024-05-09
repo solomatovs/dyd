@@ -1,97 +1,86 @@
-jude allows you to describe a structure in one in one struct block, without having to write an impl block
+Jude this is a small macros for the libloading that makes it easier to write plugins
+Jude depends libloading only
+
+You can write the structure without implementation, and load the functionality from the plugin
+
+Code example
+-------
 
 ```rust
-use jude::jude;
-
-jude! (
-    #[derive(Clone, Debug)]
-    pub struct ImplAllFuncAndFields {
-        pub fn fn_self_mut_ref(&mut self, one: u8) {
-            self.field_1 = one;
-        },
-        fn fn_self_ref(&self, one: u8) {
-            println!("one: {}", one);
-        },
-        fn fn_self(self) -> Self {
-            Self {
-                field_1: 0,
-                ..self
-            }
-        },
-        fn new() -> Self {
-            Self {
-                field_1: 0,
-                field_2: 0,
-            }
-        },
-        
-        field_1: u8 = 8,
-        field_2: u8 = {
-            let s = 88;
-            let dd = s / 4;
-            dd
-        },
-    }
-);
-
-fn main() {
-    let lib = ImplAllFuncAndFields::default();
-    println!("{:?}", lib);
-
-    let lib = ImplAllFuncAndFields::new();
-    println!("{:?}", lib);
-}
-```
-
-jude allows you to define the functionality of the structure without implementation
-so the _load_from method will be available through which you can load a shared library in which the desired functionality is defined
-
-```rust
-// plugin
+// examples/jude_plugin.rs
 #[repr(C)]
 #[derive(Clone, Debug)]
-pub struct ImplPartiallyFuncAndFields {
+pub struct JudePlugin {
+    pub word: String,
     pub one: u8,
-    pub two: i8,
-    pub tree: f32,
-    pub four: bool,
-    pub five: String,
+    pub two: f32,
+    pub tree: bool,
 }
 
 #[no_mangle]
-pub fn say(_self: &ImplPartiallyFuncAndFields, word: &str) {
-    println!("> shared_1");
-    println!("say: {}", word);
+pub fn who_am_i(_self: &JudePlugin) {
+    println!("my name is Jude");
 }
 ```
 
 ```rust
-// app
-use std::ffi::OsString;
+// examples/jude_plugin_app.rs
+use std::{ffi::OsString, thread, time::Duration};
 
 use jude::jude;
 
 jude! (
     #[repr(C)]
-    #[derive(Debug)]
-    pub struct ImplPartiallyFuncAndFields {
+    #[derive(Debug, Clone)]
+    pub struct JudePlugin {
+        pub word: String = String::from("example string"),
         pub one: u8 = 1,
-        pub two: i8 = -2,
-        pub tree: f32 = 3.0,
-        pub four: bool = true,
-        pub five: String = String::from("two"),
+        pub two: f32 = 2.0,
+        pub tree: bool = true,
 
-        pub fn say(&self, word: &str),
+        pub fn who_am_i(&self),
     }
 );
 
 fn main() -> Result<(), libloading::Error> {
-    let lib = ImplPartiallyFuncAndFields::_load_from(
-        OsString::from("target/debug/examples/libshared_1.dylib")
-    )?;
+    let mut lib =
+        JudePlugin::_load_from(OsString::from("target/debug/examples/libjude_plugin.dylib"))?;
 
-    lib.say("hello");
+    loop {
+        if let Ok(true) = lib._is_changed() {
+            if let Err(e) = lib._reload() {
+                println!("{:?}", e);
+                break;
+            }
+        }
+
+        lib.who_am_i();
+
+        thread::sleep(Duration::from_secs(1));
+    }
 
     Ok(())
 }
+```
+
+![](docs/SceneCapture.gif)
+
+Usage
+-----
+
+```toml
+# Cargo.toml
+[dependencies]
+jude = "0.1.*"
+
+```
+
+Example build
+-------
+
+```
+1, cargo build --examples
+2. cargo run --example jude_plugin_app
+3. change who_am_i func examples/jude_plugin.rs 
+4. cargo build --exmaples
 ```

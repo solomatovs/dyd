@@ -1,6 +1,6 @@
 [package]
 name = "jude"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["solomatovs <solomatovs@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -17,21 +17,16 @@ libloading = "0.8.*"
 
 
 [[example]]
-name = "shared_1"
-path = "examples/shared_1.rs"
+name = "jude_plugin"
+path = "examples/jude_plugin.rs"
 crate-type = ["cdylib"]
 
 [[example]]
-name = "shared_2"
-path = "examples/shared_2.rs"
-crate-type = ["cdylib"]
+name = "jude_plugin_app"
+path = "examples/jude_plugin_app.rs"
+crate-type = ["bin"]
 
 [[example]]
 name = "impl_all_func_and_fields"
 path = "examples/impl_all_func_and_fields.rs"
-crate-type = ["bin"]
-
-[[example]]
-name = "shared_tmpl"
-path = "examples/shared_tmpl.rs"
 crate-type = ["bin"]
