@@ -4,7 +4,7 @@ use jude::jude;
 
 jude! (
     #[repr(C)]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct SharedTepl {
         pub word: String = String::from("hello world"),
 
