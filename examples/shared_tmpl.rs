@@ -13,7 +13,8 @@ jude! (
 );
 
 fn main() -> Result<(), libloading::Error> {
-    let mut lib = SharedTepl::_load_from(OsString::from("target/debug/examples/libshared_1.dylib"))?;
+    let mut lib =
+        SharedTepl::_load_from(OsString::from("target/debug/examples/libshared_1.dylib"))?;
 
     loop {
         if let Ok(true) = lib._is_changed() {

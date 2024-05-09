@@ -21,7 +21,7 @@ jude! (
                 field_2: 0,
             }
         },
-        
+
         field_1: u8 = 8,
         field_2: u8 = {
             let s = 88;

@@ -457,7 +457,7 @@ macro_rules! jude(
                     self.__from_lib = n.__from_lib.clone();
                     self.__from_file = n.__from_file.clone();
                     self.__modified = n.__modified.clone();
-    
+
                     Ok(())
                 }
 
