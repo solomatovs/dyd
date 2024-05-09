@@ -1,7 +1,7 @@
 jude allows you to describe a structure in one in one struct block, without having to write an impl block
 
 ```rust
-pub use jude::jude;
+use jude::jude;
 
 jude! (
     #[derive(Clone, Debug)]
@@ -36,10 +36,62 @@ jude! (
 
 fn main() {
     let lib = ImplAllFuncAndFields::default();
+    println!("{:?}", lib);
 
+    let lib = ImplAllFuncAndFields::new();
     println!("{:?}", lib);
 }
 ```
-jude allows you to define the functionality of the structure without implementation
-so the load_from_lib method will be available through which you can load a shared library in which the desired functionality is defined
 
+jude allows you to define the functionality of the structure without implementation
+so the _load_from method will be available through which you can load a shared library in which the desired functionality is defined
+
+```rust
+// plugin
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct ImplPartiallyFuncAndFields {
+    pub one: u8,
+    pub two: i8,
+    pub tree: f32,
+    pub four: bool,
+    pub five: String,
+}
+
+#[no_mangle]
+pub fn say(_self: &ImplPartiallyFuncAndFields, word: &str) {
+    println!("> shared_1");
+    println!("say: {}", word);
+}
+```
+
+```rust
+// app
+use std::ffi::OsString;
+
+use jude::jude;
+
+jude! (
+    #[repr(C)]
+    #[derive(Debug)]
+    pub struct ImplPartiallyFuncAndFields {
+        pub one: u8 = 1,
+        pub two: i8 = -2,
+        pub tree: f32 = 3.0,
+        pub four: bool = true,
+        pub five: String = String::from("two"),
+
+        pub fn say(&self, word: &str),
+    }
+);
+
+fn main() -> Result<(), libloading::Error> {
+    let lib = ImplPartiallyFuncAndFields::_load_from(
+        OsString::from("target/debug/examples/libshared_1.dylib")
+    )?;
+
+    lib.say("hello");
+
+    Ok(())
+}
+```

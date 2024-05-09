@@ -346,7 +346,7 @@ macro_rules! jude(
     );
 
     // если нет полей и методов без реализации
-    // то создаем структуру без load_from_lib
+    // то создаем структуру без _load_from
     (
         output
             [ $struct_name:tt ]
@@ -420,7 +420,7 @@ macro_rules! jude(
             impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
                 $($fn_not_impl)*
 
-                fn load_from_lib(file_path: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
+                fn _load_from(file_path: std::ffi::OsString) -> Result<Self, libloading::Error> { //Result<Self, $crate::JudeError> {
                     let lib = unsafe {
                         libloading::Library::new(&file_path)
                     }?;
@@ -447,39 +447,28 @@ macro_rules! jude(
                     Ok(res)
                 }
 
-                fn reload_lib(&mut self) -> Result<(), libloading::Error> {
-                    
-                    let from_file = self.__from_file.clone();
-                    let lib = unsafe {
-                        libloading::Library::new(&from_file)
-                    }?;
-
-                    let modified = std::fs::metadata(&from_file).unwrap();
-                    let modified = modified.modified().unwrap();
+                fn _reload(&mut self) -> Result<(), libloading::Error> {
+                    let n = Self::_load_from(self.__from_file.clone())?;
 
                     $(
-                        self.$field_not_impl = {
-                            let symbol = unsafe {
-                                lib.get(stringify!($field_not_impl).as_bytes())
-                            }?;
-
-                            *symbol
-                        };
+                        self.$field_not_impl = n.$field_not_impl;
                     )*
 
-                    self.__from_lib = std::sync::Arc::new(lib);
-                    self.__from_file = from_file;
-                    self.__modified = modified;
+                    self.__from_lib = n.__from_lib.clone();
+                    self.__from_file = n.__from_file.clone();
+                    self.__modified = n.__modified.clone();
     
                     Ok(())
                 }
 
-                fn changed(&self) -> Result<bool, std::io::Error> {
+                fn _is_changed(&self) -> Result<bool, std::io::Error> {
                     let modified = std::fs::metadata(&self.__from_file)?;
                     let modified = modified.modified()?;
 
                     match modified.duration_since(self.__modified) {
-                        Ok(x) => Ok(x.is_zero()),
+                        Ok(x) => {
+                            Ok(!x.is_zero())
+                        },
                         Err(e) => Ok(false),
                     }
                 }

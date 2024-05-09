@@ -32,6 +32,6 @@ path = "examples/impl_all_func_and_fields.rs"
 crate-type = ["bin"]
 
 [[example]]
-name = "impl_partially_func_and_fields"
-path = "examples/impl_partially_func_and_fields.rs"
+name = "shared_tmpl"
+path = "examples/shared_tmpl.rs"
 crate-type = ["bin"]
