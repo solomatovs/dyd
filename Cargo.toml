@@ -26,6 +26,18 @@ name = "jude_plugin_app"
 path = "examples/jude_plugin_app.rs"
 crate-type = ["bin"]
 
+
+[[example]]
+name = "jude_plugin_new"
+path = "examples/jude_plugin_new.rs"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "jude_plugin_new_app"
+path = "examples/jude_plugin_new_app.rs"
+crate-type = ["bin"]
+
+
 [[example]]
 name = "impl_all_func_and_fields"
 path = "examples/impl_all_func_and_fields.rs"

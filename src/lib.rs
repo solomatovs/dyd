@@ -1,5 +1,3 @@
-#![feature(trace_macros)]
-
 #[macro_export]
 macro_rules! as_item( ($i:item) => ($i) );
 
@@ -15,7 +13,7 @@ macro_rules! jude(
             [ $vis ]
             [ $(#[$attr])* ]
             [ $(<$($lifetime),+>)* ]
-            [] [] [] [] [] [] $body
+            [] [] [] [] [] [] [] [] $body
         );
     );
 
@@ -26,18 +24,22 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        $fn_constr_impl:tt
         {}
     ) => (
         jude!(output $struct_name $struct_vis $struct_attr $struct_lifetime
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            $fn_constr_impl
         );
     );
 
@@ -49,9 +51,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
@@ -62,9 +66,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* $(#[$attr])* $vis $(<$($lifetime),+>)* fn $name($($tt)*) $(-> $ret)? $body ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -80,9 +86,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
@@ -93,9 +101,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -111,9 +121,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
@@ -124,9 +136,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -142,9 +156,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
@@ -155,9 +171,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -168,14 +186,120 @@ macro_rules! jude(
     );
 
     // это парсинг фукнции без первого аргумента с типами: self, &self, &mut self
+    // если функция отмечена как конструктор: #[constructor]
+    // то ее реализация берется за основу при создании объекта
+    // во первых она будет реализована без &self первого аргумента
+    // во вторых она должна возвращать объект Self
     (
         parse $struct_name:tt $struct_vis:tt $struct_attr:tt $struct_lifetime:tt
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
+        {
+            $(#[$attr:meta])*
+            $vis:vis $(<$($lifetime:lifetime),+>)*
+            fn $name:ident(lib_path: std::ffi::OsString $(,$item:ident:$ty:ty)*) -> $ret:ty $body:block, $($t:tt)*
+        }
+    ) => (
+        jude!( parse $struct_name $struct_vis $struct_attr $struct_lifetime
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn_impl)* ]
+            [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)*
+                $(#[$attr])* $vis $(<$($lifetime),+>)* fn $name($($tt)*) -> $ret $body,
+            ]
+            { $($t)* }
+        );
+    );
+
+    // если функция отмечена как конструктор: #[constructor]
+    // то ее реализация берется за основу при создании объекта
+    // во первых она будет реализована без &self первого аргумента
+    // во вторых она должна возвращать объект Self
+    (
+        parse $struct_name:tt $struct_vis:tt $struct_attr:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn_impl:tt)* ]
+        [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
+        {
+            $(#[$attr:meta])*
+            $vis:vis $(<$($lifetime:lifetime),+>)*
+            fn $name:ident(lib_path: std::ffi::OsString $(,$item:ident:$ty:ty)*) -> $ret:ty, $($t:tt)*
+        }
+    ) => (
+        jude!( parse $struct_name $struct_vis $struct_attr $struct_lifetime
+            [ $($member_impl)* ]
+            [ $($member_not_impl)* ]
+            [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
+            [ $($field_not_impl)* ]
+            [ $($fn_impl)* ]
+            [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)*
+                $(#[$attr])* $vis $(<$($lifetime),+>)* fn $name(lib_path: std::ffi::OsString $(,$item:$ty)*) -> $ret { //Result<Self, $crate::JudeError> {
+                    let lib = unsafe {
+                        libloading::Library::new(&lib_path)
+                    }?;
+
+                    let symbol: libloading::Symbol<fn(std::ffi::OsString, $($ty),*) -> Self> = unsafe {
+                        lib.get(stringify!($name).as_bytes())
+                    }?;
+
+                    let res = symbol(lib_path.clone(), $($item)*);
+
+                    let modified = std::fs::metadata(&lib_path).unwrap();
+                    let modified = modified.modified().unwrap();
+
+                    let res = Self {
+                        $($field_impl)*
+                        $(
+                            $field_sym_impl: {
+                                let symbol = unsafe {
+                                    lib.get(stringify!($field_sym_impl).as_bytes())
+                                }?;
+
+                                *symbol
+                            },
+                        )*
+                        $(
+                            $field_not_impl: res.$field_not_impl,
+                        )*
+                        __from_file: lib_path,
+                        __from_lib: std::sync::Arc::new(lib),
+                        __modified: modified,
+                    };
+
+                    Ok(res)
+                }
+            ]
+            { $($t)* }
+        );
+    );
+
+    (
+        parse $struct_name:tt $struct_vis:tt $struct_attr:tt $struct_lifetime:tt
+        [ $($member_impl:tt)* ]
+        [ $($member_not_impl:tt)* ]
+        [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
+        [ $($field_not_impl:tt)* ]
+        [ $($fn_impl:tt)* ]
+        [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis $(<$($lifetime:lifetime),+>)*
@@ -186,9 +310,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             {
                 [$(#[$attr])* $vis $(<$($lifetime),+>)*],
                 [fn $name],
@@ -211,9 +337,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             [$fnattr:tt],
             [fn $name:ident],
@@ -230,11 +358,13 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* $name: fn($($member_impl_self)* $($ty),*) $(-> $ret)?, ]
             [ $($field_impl)* ]
-            [ $($field_not_impl)* $name, ]
+            [ $($field_sym_impl)* $name ]
+            [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* $fnattr fn $name($($fn_struct_decl_self)* $($item:$ty),*) $(-> $ret)? {
                 ($self.$name)($($fn_call_self)* $($item),*)
             }]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -246,9 +376,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis
@@ -259,9 +391,11 @@ macro_rules! jude(
             [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* $name: $body, ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -273,9 +407,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis
@@ -286,9 +422,11 @@ macro_rules! jude(
             [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* $name: $body, ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -300,9 +438,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis
@@ -313,9 +453,11 @@ macro_rules! jude(
             [ $($member_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
             [ $($member_not_impl)* ]
             [ $($field_impl)* $name: $($body)+, ]
+            [ $($field_sym_impl)* ]
             [ $($field_not_impl)* ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -325,9 +467,11 @@ macro_rules! jude(
         [ $($member_impl:tt)* ]
         [ $($member_not_impl:tt)* ]
         [ $($field_impl:tt)* ]
+        [ $($field_sym_impl:tt)* ]
         [ $($field_not_impl:tt)* ]
         [ $($fn_impl:tt)* ]
         [ $($fn_not_impl:tt)* ]
+        [ $($fn_constr_impl:tt)* ]
         {
             $(#[$attr:meta])*
             $vis:vis
@@ -338,9 +482,11 @@ macro_rules! jude(
             [ $($member_impl)* ]
             [ $($member_not_impl)* $(#[$attr])* $vis $name: $(<$($lifetime),+>)* $typ, ]
             [ $($field_impl)* ]
-            [ $($field_not_impl)* ]
+            [ $($field_sym_impl)* ]
+            [ $($field_not_impl)* $name ]
             [ $($fn_impl)* ]
             [ $($fn_not_impl)* ]
+            [ $($fn_constr_impl)* ]
             { $($t)* }
         );
     );
@@ -357,7 +503,9 @@ macro_rules! jude(
             [ ]
             [ $($field_impl:tt)* ]
             [ ]
+            [ ]
             [ $($fn_impl:tt)* ]
+            [ ]
             [ ]
     )
     => (
@@ -394,9 +542,11 @@ macro_rules! jude(
             [ $($member_impl:tt)* ]
             [ $($member_not_impl:tt)* ]
             [ $($field_impl:tt)* ]
-            [ $($field_not_impl:tt, )* ]
+            [ $($field_sym_impl:tt )* ]
+            [ $($field_not_impl:tt )* ]
             [ $($fn_impl:tt)* ]
             [ $($fn_not_impl:tt)* ]
+            [ ]
     )
     => (
         $crate::as_item!(
@@ -431,9 +581,9 @@ macro_rules! jude(
                     let res = Self {
                         $($field_impl)*
                         $(
-                            $field_not_impl: {
+                            $field_sym_impl: {
                                 let symbol = unsafe {
-                                    lib.get(stringify!($field_not_impl).as_bytes())
+                                    lib.get(stringify!($field_sym_impl).as_bytes())
                                 }?;
 
                                 *symbol
@@ -451,12 +601,92 @@ macro_rules! jude(
                     let n = Self::_load_from(self.__from_file.clone())?;
 
                     $(
-                        self.$field_not_impl = n.$field_not_impl;
+                        self.$field_sym_impl = n.$field_sym_impl;
                     )*
 
                     self.__from_lib = n.__from_lib.clone();
                     self.__from_file = n.__from_file.clone();
                     self.__modified = n.__modified.clone();
+
+                    Ok(())
+                }
+
+                fn _is_changed(&self) -> Result<bool, std::io::Error> {
+                    let modified = std::fs::metadata(&self.__from_file)?;
+                    let modified = modified.modified()?;
+
+                    match modified.duration_since(self.__modified) {
+                        Ok(x) => {
+                            Ok(!x.is_zero())
+                        },
+                        Err(e) => Ok(false),
+                    }
+                }
+            }
+        );
+    );
+
+    // реализует конструкторы
+    (
+        output
+            [ $struct_name:tt ]
+            [ $struct_vis:tt ]
+            [ $(#[$struct_attr:meta])* ]
+            [ $(<$($struct_lifetime:lifetime),+>)* ]
+            [ $($member_impl:tt)* ]
+            [ $($member_not_impl:tt)* ]
+            [ $($field_impl:tt)* ]
+            [ $($field_sym_impl:tt )* ]
+            [ $($field_not_impl:tt )* ]
+            [ $($fn_impl:tt)* ]
+            [ $($fn_not_impl:tt)* ]
+            [ $($fn_constr_impl:tt)* ]
+            // [ $($(#[$attr:meta])* $vis:vis $(<$($lifetime:lifetime),+>)* fn $name:ident($($item:ident:$ty:ty)*) -> $ret:ty,)+ ]
+    )
+    => (
+        $crate::as_item!(
+            $(#[$struct_attr])*
+            $struct_vis struct $struct_name $(<$($struct_lifetime),+>)* {
+                $($member_impl)*
+                $($member_not_impl)*
+                __from_file: std::ffi::OsString,
+                __from_lib: std::sync::Arc<libloading::Library>,
+                __modified: std::time::SystemTime,
+            }
+        );
+
+        $crate::as_item!(
+            impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
+                $($fn_impl)*
+            }
+        );
+
+        $crate::as_item!(
+            impl $(<$($struct_lifetime),+>)* $struct_name $(<$($struct_lifetime),+>)* {
+                $($fn_not_impl)*
+
+                $($fn_constr_impl)*
+
+                fn _reload(&mut self) -> Result<(), libloading::Error> {
+                    let lib = unsafe {
+                        libloading::Library::new(&self.__from_file)
+                    }?;
+
+                    $(
+                        self.$field_sym_impl = {
+                            let symbol = unsafe {
+                                lib.get(stringify!($field_sym_impl).as_bytes())
+                            }?;
+
+                            *symbol
+                        };
+                    )*
+
+                    let modified = std::fs::metadata(&self.__from_file).unwrap();
+                    let modified = modified.modified().unwrap();
+
+                    self.__from_lib = std::sync::Arc::new(lib);
+                    self.__modified = modified;
 
                     Ok(())
                 }

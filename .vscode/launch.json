@@ -7,15 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "impl_all_func_and_fields",
+            "name": "jude_plugin_app",
+            "preLaunchTask": "build",
             "cargo": {
                 "args": [
                     "build",
-                    "--example=impl_all_func_and_fields",
+                    "--example=jude_plugin_app",
                     "--package=jude"
                 ],
                 "filter": {
-                    "name": "impl_all_func_and_fields",
+                    "name": "jude_plugin_app",
                     "kind": "example"
                 }
             },
@@ -25,15 +26,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "impl_partially_func_and_fields",
+            "name": "jude_plugin_new_app",
+            "preLaunchTask": "build",
             "cargo": {
                 "args": [
                     "build",
-                    "--example=impl_partially_func_and_fields",
+                    "--example=jude_plugin_new_app",
                     "--package=jude"
                 ],
                 "filter": {
-                    "name": "impl_partially_func_and_fields",
+                    "name": "jude_plugin_new_app",
                     "kind": "example"
                 }
             },
