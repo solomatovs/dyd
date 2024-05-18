@@ -1,0 +1,17 @@
+{
+    "memory-view.showMemoryPanel": true,
+    "memory-view.trackDebuggers": [
+        "lldb",
+        "CodeLLDB",
+    ],
+    "memory-inspector.columns.ascii": true,
+    "memory-inspector.columns.variables": true,
+    "memory-inspector.debugTypes": [
+        "gdb",
+        "embedded-debug",
+        "arm-debugger",
+        "lldb"
+    ],
+    "memory-inspector.groupings.groupsPerRow": 8,
+    "memory-inspector.loggingVerbosity": "debug",
+}

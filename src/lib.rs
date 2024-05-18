@@ -260,6 +260,7 @@ macro_rules! jude(
                     }?;
 
                     let res = symbol(lib_path.clone(), $($item)*);
+                    let res_ptr = ptr::addr_of!(res);
 
                     let modified = std::fs::metadata(&lib_path).unwrap();
                     let modified = modified.modified().unwrap();
@@ -276,7 +277,11 @@ macro_rules! jude(
                             },
                         )*
                         $(
-                            $field_not_impl: res.$field_not_impl,
+                            $field_not_impl: unsafe {
+                                let ptr = res_ptr.byte_add(offset_of!(Self, $field_not_impl));
+                                let ptr = ptr.cast();
+                                *ptr
+                            },
                         )*
                         __from_file: lib_path,
                         __from_lib: std::sync::Arc::new(lib),

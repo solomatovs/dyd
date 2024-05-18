@@ -27,7 +27,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "jude_plugin_new_app",
-            "preLaunchTask": "build",
+            
             "cargo": {
                 "args": [
                     "build",

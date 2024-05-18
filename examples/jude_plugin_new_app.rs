@@ -1,8 +1,20 @@
 #![feature(trace_macros)]
+#![feature(maybe_uninit_as_bytes)]
+#![feature(strict_provenance)]
+#![feature(maybe_uninit_uninit_array)]
+
 
 use std::path::PathBuf;
 use std::{ffi::OsString, thread, time::Duration};
-use std::ptr;
+use std::{mem, ptr};
+use std::mem::MaybeUninit;
+// use std::mem;
+use std::mem::offset_of;
+use std::mem::size_of;
+use std::ptr::addr_of;
+use std::ptr::addr_of_mut;
+use std::io::Write;
+use std::ffi::c_void;
 
 // use jude::jude;
 
@@ -40,22 +52,47 @@ use std::ptr;
 //     Ok(())
 // }
 
+// macro_rules! offset_of {
+//     ($ty:ty, $field:ident) => {
+//         unsafe { &(*(0 as *const $ty)).$field as *const _ as usize }
+//     }
+// }
+
+trait StructSlice: Sized {
+    fn as_slice(&self) -> &[u8] {
+        unsafe {
+            core::slice::from_raw_parts(
+                self as *const Self as *const u8,
+                core::mem::size_of::<Self>(),
+            )
+        }
+    }
+
+    fn as_struct(bytes: &[u8]) -> &Self {
+        unsafe { &*(bytes.as_ptr() as *const Self) }
+    }
+}
 
 fn main() -> Result<(), libloading::Error> {
+    #[repr(C)]
     #[derive(Debug)]
-    pub struct JudePluginInner {
+    struct JudePluginInner {
         // pub config_path: PathBuf,
-        // pub one: u8,
+        pub one: u8,
+        pub two: f32,
     }
+    #[repr(C)]
     #[derive(Debug)]
     pub struct JudePlugin {
         // pub config_path: PathBuf,
-        // pub one: u8,
+        pub one: u8,
+        pub two: f32,
         who_am_i: fn(&Self),
         __from_file: std::ffi::OsString,
         __from_lib: std::sync::Arc<libloading::Library>,
         __modified: std::time::SystemTime,
     }
+    impl StructSlice for JudePlugin {}
     impl JudePlugin {}
     impl JudePlugin {
         pub fn who_am_i(&self) {
@@ -65,24 +102,100 @@ fn main() -> Result<(), libloading::Error> {
             lib_path: std::ffi::OsString,
             config_path: PathBuf,
         ) -> Result<Self, libloading::Error> {
-            let lib = std::sync::Arc::new(unsafe { libloading::Library::new(&lib_path) }?);
-            let symbol: libloading::Symbol<fn(std::ffi::OsString, PathBuf) -> JudePluginInner> = unsafe {
+            let sizeof = std::mem::size_of::<JudePlugin>();
+            
+            let lib = std::sync::Arc::new(unsafe {
+                libloading::Library::new(&lib_path)
+            }?);
+            // let symbol: libloading::Symbol<fn(std::ffi::OsString, PathBuf) -> Result<*const [u8], libloading::Error>> = unsafe {
+            //     lib.get("new".as_bytes())
+            // }?;
+            // let mut res =  symbol(lib_path.clone(), config_path)?;
+
+            let symbol: libloading::Symbol<fn(std::ffi::OsString, PathBuf) -> u8> = unsafe {
                 lib.get("new".as_bytes())
             }?;
-            let _res =  symbol(lib_path.clone(), config_path);
+            let mut res =  symbol(lib_path.clone(), config_path);
+            // let res = ptr::from_ref(&res);
+            // println!("{:#?}", res);
+            let mut src_ptr = ptr::addr_of_mut!(res) as *const u8;
+            println!("base_ptr: {:#?}", src_ptr);
+            let off = offset_of!(Self, two);
+            let size = off + mem::size_of::<f32>();
+            // Промежуточный массив байт
+            let mut buffer: Vec<MaybeUninit<u8>> = Vec::with_capacity(size);
+            buffer.set_len(size);
+
+
             let modified = std::fs::metadata(&lib_path).unwrap();
             let modified = modified.modified().unwrap();
-            let res = Self {
-                who_am_i: {
-                    let symbol = unsafe { lib.get("who_am_i".as_bytes()) }?;
-                    *symbol
-                },
-                // config_path: res.config_path,
-                // one: res.one,
-                __from_file: lib_path,
-                __from_lib: lib,
-                __modified: modified,
+
+            let mut res_2: MaybeUninit<JudePlugin> = MaybeUninit::uninit();
+
+            let dst_ptr = res_2.as_ptr();
+
+            let p = res_2.as_mut_ptr();
+            unsafe {
+                p.copy_from(src_ptr, size);
+                let off = offset_of!(Self, one);
+                let off = offset_of!(Self, two);
+
+                let off = offset_of!(Self, two);
+                let ptr = *(src_ptr.byte_add(off).cast());
+                addr_of_mut!((*p).two).swap(ptr);
+                
+                // let off = offset_of!(Self, config_path);
+                // let ptr = *(base_ptr.byte_add(off).cast());
+                // addr_of_mut!((*p).config_path).swap(ptr);
+
+                let sym = lib.get("who_am_i".as_bytes())?;
+                addr_of_mut!((*p).who_am_i).write(*sym);
+
+                addr_of_mut!((*p).__from_file).write(lib_path);
+                addr_of_mut!((*p).__from_lib).write(lib);
+                addr_of_mut!((*p).__modified).write(modified);
             };
+
+            
+
+
+            
+            // unsafe {};
+            // let ptr = res_2.as_mut_ptr();
+            // let offset = offset_of!(JudePlugin, one);
+            // let addr_source = unsafe { base_ptr.byte_add(offset) };
+            // let addr_target = unsafe {addr_of_mut!((*ptr).one).write(val)};
+            // unsafe {addr_target.with_addr(addr_source)};
+            let res = unsafe {res_2.assume_init()};
+            // todo!();
+
+            // let res = Self {
+            //     who_am_i: {
+            //         let symbol = unsafe { lib.get("who_am_i".as_bytes()) }?;
+            //         *symbol
+            //     },
+            //     one: unsafe {
+            //         let ptr = base_ptr.byte_add(offset_of!(Self, one));
+            //         let ptr = ptr.cast();
+            //         *ptr
+            //     },
+            //     two: unsafe {
+            //         let ptr = base_ptr.byte_add(offset_of!(Self, two));
+            //         let ptr = ptr.cast();
+            //         *ptr
+            //     },
+            //     config: unsafe {
+            //         let ptr = base_ptr.byte_add(offset_of!(Self, two));
+            //         let ptr = ptr.cast();
+            //         *ptr
+            //     },
+            //     __from_file: lib_path,
+            //     __from_lib: lib,
+            //     __modified: modified,
+            // };
+
+            let base_ptr_res = ptr::addr_of!(res);
+
 
             println!("{:#?}", res);
 
